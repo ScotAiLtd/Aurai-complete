@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import {useState} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -38,7 +38,7 @@ type Mode = "sign-in" | "sign-up";
 const REDIRECT_TO = "/dashboard";
 
 export function AuthForm() {
-  const [mode, setMode] = React.useState<Mode>("sign-in");
+  const [mode, setMode] = useState<Mode>("sign-in");
   const isSignUp = mode === "sign-up";
 
   return (
@@ -256,7 +256,7 @@ function SignUpFormFields() {
 }
 
 function GoogleButton({ mode }: { mode: Mode }) {
-  const [isPending, setIsPending] = React.useState(false);
+  const [isPending, setIsPending] = useState(false);
 
   const onClick = async () => {
     setIsPending(true);

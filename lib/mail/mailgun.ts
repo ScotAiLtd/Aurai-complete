@@ -36,25 +36,20 @@ export async function sendMail({ to, subject, html, text }: SendMailArgs) {
   const mg = getClient();
 
   if (!mg || !domain) {
-    console.warn(
-      `[mail] MAILGUN_API_KEY or MAILGUN_DOMAIN not set — printing email to console instead.`
-    );
-    console.log(
-      [
-        "──────── DEV EMAIL ────────",
-        `To:      ${to}`,
-        `From:    ${from}`,
-        `Subject: ${subject}`,
-        "",
-        text,
-        "───────────────────────────",
-      ].join("\n")
-    );
+    console.log(text);
     return;
   }
 
   try {
-    await mg.messages.create(domain, { from, to, subject, html, text });
+    // await mg.messages.create(domain, { from, to, subject, html, text });
+    const response = await mg.messages.create(domain, {
+      from,
+      to,
+      subject,
+      html,
+      text,
+    });
+    // console.log("[mail] Mailgun Response:", response);
   } catch (error) {
     console.error("[mail] Mailgun send failed:", error);
     throw error;

@@ -25,10 +25,7 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
-  trustedOrigins: [
-    "http://localhost:3000",
-    "http://149.36.1.94:3000",
-  ],
+  trustedOrigins: ["http://localhost:3000", "http://149.36.1.94:3000"],
   plugins: [
     emailOTP({
       sendVerificationOnSignUp: true,
@@ -36,9 +33,11 @@ export const auth = betterAuth({
       storeOTP: "hashed",
       sendVerificationOTP: async ({ email, otp, type }) => {
         const { subject, html, text } = buildOtpEmail(type, otp);
-        void sendMail({ to: email, subject, html, text }).catch((err) => {
+        try {
+          await sendMail({ to: email, subject, html, text });
+        } catch (err) {
           console.error("[auth] sendVerificationOTP failed:", err);
-        });
+        }
       },
     }),
   ],

@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState , useEffect} from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,10 +38,10 @@ const RESEND_COOLDOWN_S = 30;
 
 export function ResetPasswordForm({ email }: { email: string }) {
   const router = useRouter();
-  const [cooldown, setCooldown] = React.useState(0);
-  const [isResending, setIsResending] = React.useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (cooldown <= 0) return;
     const t = setInterval(() => setCooldown((s) => s - 1), 1000);
     return () => clearInterval(t);

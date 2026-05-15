@@ -68,3 +68,58 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+enum TurbineStatus {
+  WORKING
+  IN_USE
+  SUSPENDED
+  NOT_OPERATIONAL
+}
+
+model Site {
+  id                 String    @id @default(cuid())
+  name               String    @unique
+  portfolio          String?
+  spv                String?
+  oAndMProvider      String?
+  numberOfTurbines   Int
+  turbineMake        String?
+  technology         String?
+  totalCapacityMw    Decimal?  @db.Decimal(10, 2)
+  commissioningDate  DateTime?
+  operationalSince   DateTime?
+  assetManager       String?
+  turbineOem         String?
+  turbineModel       String?
+  turbineRating      Decimal?  @db.Decimal(10, 2)
+  projectStatus      String?
+  lifeExpectancy     Int?
+  lifeExtension      Int?
+  gridConnectionType String?
+  dno                String?
+  hubHeight          Decimal?  @db.Decimal(8, 2)
+  rotorDiameter      Decimal?  @db.Decimal(8, 2)
+  latitude           Decimal?  @db.Decimal(9, 6)
+  longitude          Decimal?  @db.Decimal(9, 6)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  turbines           Turbine[]
+
+  @@map("site")
+}
+
+model Turbine {
+  id        String        @id @default(cuid())
+  siteId    String
+  site      Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name      String
+  type      String?
+  serial    String?
+  status    TurbineStatus @default(WORKING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([siteId, name])
+  @@index([siteId])
+  @@map("turbine")
+}

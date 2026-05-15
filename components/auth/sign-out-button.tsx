@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import {useTransition} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 export function SignOutButton() {
   const router = useRouter();
-  const [isPending, startTransition] = React.useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const onClick = () => {
     startTransition(async () => {
