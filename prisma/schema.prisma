@@ -77,33 +77,34 @@ enum TurbineStatus {
 }
 
 model Site {
-  id                 String    @id @default(cuid())
-  name               String    @unique
+  id                 String     @id @default(cuid())
+  name               String     @unique
   portfolio          String?
   spv                String?
   oAndMProvider      String?
   numberOfTurbines   Int
   turbineMake        String?
   technology         String?
-  totalCapacityMw    Decimal?  @db.Decimal(10, 2)
+  totalCapacityMw    Decimal?   @db.Decimal(10, 2)
   commissioningDate  DateTime?
   operationalSince   DateTime?
   assetManager       String?
   turbineOem         String?
   turbineModel       String?
-  turbineRating      Decimal?  @db.Decimal(10, 2)
+  turbineRating      Decimal?   @db.Decimal(10, 2)
   projectStatus      String?
   lifeExpectancy     Int?
   lifeExtension      Int?
   gridConnectionType String?
   dno                String?
-  hubHeight          Decimal?  @db.Decimal(8, 2)
-  rotorDiameter      Decimal?  @db.Decimal(8, 2)
-  latitude           Decimal?  @db.Decimal(9, 6)
-  longitude          Decimal?  @db.Decimal(9, 6)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  hubHeight          Decimal?   @db.Decimal(8, 2)
+  rotorDiameter      Decimal?   @db.Decimal(8, 2)
+  latitude           Decimal?   @db.Decimal(9, 6)
+  longitude          Decimal?   @db.Decimal(9, 6)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
   turbines           Turbine[]
+  documents          Document[]
 
   @@map("site")
 }
@@ -122,4 +123,84 @@ model Turbine {
   @@unique([siteId, name])
   @@index([siteId])
   @@map("turbine")
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  siteId     String
+  site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  fileName   String
+  sizeBytes  BigInt
+  s3Key      String   @unique
+  uploadedAt DateTime @default(now())
+  audits     Audit[]
+
+  @@index([siteId])
+  @@map("document")
+}
+
+enum AuditStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum AuditMode {
+  STANDARD
+  SUPER
+}
+
+enum IssueSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum IssueStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model Audit {
+  id              String       @id @default(cuid())
+  documentId      String
+  document        Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  externalAuditId String?      @unique
+  status          AuditStatus  @default(PENDING)
+  mode            AuditMode    @default(SUPER)
+  overallScore    Float?
+  confidenceScore Float?
+  issuesFound     Int          @default(0)
+  reportJson      Json?
+  errorMessage    String?
+  startedAt       DateTime     @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  issues          AuditIssue[]
+
+  @@index([documentId])
+  @@map("audit")
+}
+
+model AuditIssue {
+  id          String        @id @default(cuid())
+  auditId     String
+  audit       Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  severity    IssueSeverity
+  issueType   String
+  title       String
+  description String
+  suggestion  String?
+  pageNumber  Int?
+  section     String?
+  status      IssueStatus   @default(OPEN)
+  resolvedAt  DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([auditId])
+  @@map("audit_issue")
 }

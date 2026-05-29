@@ -17,6 +17,8 @@ import { AddTurbineDialog } from "@/components/turbines/add-turbine-dialog";
 import { EditTurbineDialog } from "@/components/turbines/edit-turbine-dialog";
 import { DeleteTurbineDialog } from "@/components/turbines/delete-turbine-dialog";
 import { SiteMapTab } from "@/components/sites/site-map-tab";
+import { DocumentsList } from "@/components/documents/documents-list";
+import { UploadDocumentButton } from "@/components/documents/upload-document-button";
 import type { TurbineStatus } from "@/app/generated/prisma/enums";
 
 const STATUS_LABELS: Record<TurbineStatus, string> = {
@@ -69,9 +71,42 @@ export default async function SiteDetailPage({
     where: { id },
     include: {
       turbines: { orderBy: { name: "asc" } },
+      documents: {
+        orderBy: { uploadedAt: "desc" },
+        include: {
+          audits: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              status: true,
+              issuesFound: true,
+              _count: { select: { issues: { where: { status: "OPEN" } } } },
+            },
+          },
+        },
+      },
     },
   });
   if (!site) notFound();
+
+  const documents = site.documents.map((d) => {
+    const audit = d.audits[0];
+    return {
+      id: d.id,
+      fileName: d.fileName,
+      sizeBytes: Number(d.sizeBytes),
+      uploadedAt: d.uploadedAt,
+      latestAudit: audit
+        ? {
+            id: audit.id,
+            status: audit.status,
+            issuesFound: audit.issuesFound,
+            openIssues: audit._count.issues,
+          }
+        : null,
+    };
+  });
 
   const defaultValues = siteToFormValues(site);
 
@@ -160,7 +195,15 @@ export default async function SiteDetailPage({
         </TabsContent>
 
         <TabsContent value="documents">
-          <EmptyTab message="Documents will appear here." />
+          <div className="flex flex-col gap-4 rounded-2xl bg-card p-6 ring-1 ring-foreground/10">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-base font-medium">
+                Documents ({documents.length})
+              </h2>
+              <UploadDocumentButton siteId={site.id} />
+            </div>
+            <DocumentsList siteId={site.id} documents={documents} />
+          </div>
         </TabsContent>
 
         <TabsContent value="details">
