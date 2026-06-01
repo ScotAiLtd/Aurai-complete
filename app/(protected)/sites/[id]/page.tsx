@@ -19,6 +19,7 @@ import { DeleteTurbineDialog } from "@/components/turbines/delete-turbine-dialog
 import { SiteMapTab } from "@/components/sites/site-map-tab";
 import { DocumentsList } from "@/components/documents/documents-list";
 import { UploadDocumentButton } from "@/components/documents/upload-document-button";
+import { listTurbineModels } from "@/lib/turbine-models/actions";
 import type { TurbineStatus } from "@/app/generated/prisma/enums";
 
 const STATUS_LABELS: Record<TurbineStatus, string> = {
@@ -67,27 +68,35 @@ export default async function SiteDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const site = await prisma.site.findUnique({
-    where: { id },
-    include: {
-      turbines: { orderBy: { name: "asc" } },
-      documents: {
-        orderBy: { uploadedAt: "desc" },
-        include: {
-          audits: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            select: {
-              id: true,
-              status: true,
-              issuesFound: true,
-              _count: { select: { issues: { where: { status: "OPEN" } } } },
+  const [site, turbineModels] = await Promise.all([
+    prisma.site.findUnique({
+      where: { id },
+      include: {
+        turbines: {
+          orderBy: { name: "asc" },
+          include: { turbineModel: { select: { id: true, name: true } } },
+        },
+        documents: {
+          where: { deletedAt: null },
+          orderBy: { uploadedAt: "desc" },
+          include: {
+            markedReadyForAwpBy: { select: { name: true, email: true } },
+            audits: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: {
+                id: true,
+                status: true,
+                issuesFound: true,
+                _count: { select: { issues: { where: { status: "OPEN" } } } },
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    listTurbineModels(),
+  ]);
   if (!site) notFound();
 
   const documents = site.documents.map((d) => {
@@ -97,6 +106,13 @@ export default async function SiteDetailPage({
       fileName: d.fileName,
       sizeBytes: Number(d.sizeBytes),
       uploadedAt: d.uploadedAt,
+      docType: d.docType,
+      version: d.version,
+      markedReadyForAwpAt: d.markedReadyForAwpAt,
+      markedReadyForAwpNote: d.markedReadyForAwpNote,
+      markedReadyForAwpBy: d.markedReadyForAwpBy
+        ? d.markedReadyForAwpBy.name ?? d.markedReadyForAwpBy.email
+        : null,
       latestAudit: audit
         ? {
             id: audit.id,
@@ -143,7 +159,7 @@ export default async function SiteDetailPage({
               <h2 className="text-base font-medium">
                 Turbines ({site.turbines.length} of {site.numberOfTurbines})
               </h2>
-              <AddTurbineDialog siteId={site.id} />
+              <AddTurbineDialog siteId={site.id} turbineModels={turbineModels} />
             </div>
 
             {site.turbines.length === 0 ? (
@@ -159,13 +175,11 @@ export default async function SiteDetailPage({
                   >
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="text-sm font-medium">{turbine.name}</span>
-                      {turbine.type || turbine.serial ? (
-                        <span className="truncate text-xs text-muted-foreground">
-                          {[turbine.type, turbine.serial]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                      ) : null}
+                      <span className="truncate text-xs text-muted-foreground">
+                        {[turbine.turbineModel.name, turbine.serial]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
                     </div>
                     <Badge variant={STATUS_VARIANT[turbine.status]}>
                       {STATUS_LABELS[turbine.status]}
@@ -174,9 +188,10 @@ export default async function SiteDetailPage({
                       <EditTurbineDialog
                         siteId={site.id}
                         turbineId={turbine.id}
+                        turbineModels={turbineModels}
                         defaultValues={{
                           name: turbine.name,
-                          type: turbine.type ?? "",
+                          turbineModelId: turbine.turbineModelId,
                           serial: turbine.serial ?? "",
                           status: turbine.status,
                         }}

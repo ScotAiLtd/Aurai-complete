@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
@@ -24,17 +24,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  TurbineModelPicker,
+  type TurbineModelOption,
+} from "@/components/turbines/turbine-model-picker";
 
 export type TurbineFormValues = {
   name: string;
-  type: string;
+  turbineModelId: string;
   serial: string;
   status: TurbineStatus;
 };
 
 export const EMPTY_TURBINE_FORM: TurbineFormValues = {
   name: "",
-  type: "",
+  turbineModelId: "",
   serial: "",
   status: TurbineStatus.WORKING,
 };
@@ -51,6 +55,7 @@ type TurbineFormProps = (
   | { mode: "edit"; siteId: string; turbineId: string }
 ) & {
   defaultValues?: TurbineFormValues;
+  turbineModels: TurbineModelOption[];
   onCancel?: () => void;
   onSuccess?: () => void;
 };
@@ -60,17 +65,23 @@ export function TurbineForm({
   siteId,
   turbineId,
   defaultValues,
+  turbineModels,
   onCancel,
   onSuccess,
 }: TurbineFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [models, setModels] = useState<TurbineModelOption[]>(turbineModels);
 
   const form = useForm<TurbineFormValues>({
     defaultValues: defaultValues ?? EMPTY_TURBINE_FORM,
   });
 
   const onSubmit = form.handleSubmit((values) => {
+    if (!values.turbineModelId) {
+      form.setError("turbineModelId", { message: "Turbine model is required." });
+      return;
+    }
     startTransition(async () => {
       const result =
         mode === "create"
@@ -106,15 +117,26 @@ export function TurbineForm({
           )}
         />
 
-        <FormField
+        <Controller
           control={form.control}
-          name="type"
+          name="turbineModelId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Type</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. Vestas V112-3.45 MW" {...field} />
-              </FormControl>
+              <FormLabel>
+                Turbine Model <span className="text-destructive">*</span>
+              </FormLabel>
+              <TurbineModelPicker
+                value={field.value}
+                onChange={field.onChange}
+                models={models}
+                onModelCreated={(m) =>
+                  setModels((prev) =>
+                    prev.some((p) => p.id === m.id)
+                      ? prev
+                      : [...prev, m].sort((a, b) => a.name.localeCompare(b.name)),
+                  )
+                }
+              />
               <FormMessage />
             </FormItem>
           )}

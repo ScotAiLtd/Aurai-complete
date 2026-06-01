@@ -13,10 +13,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { TurbineForm } from "@/components/turbines/turbine-form";
+import type { TurbineModelOption } from "@/components/turbines/turbine-model-picker";
 
-export function AddTurbineDialog({ siteId }: { siteId: string }) {
+type Props = {
+  siteId: string;
+  turbineModels: TurbineModelOption[];
+};
+
+export function AddTurbineDialog({ siteId, turbineModels }: Props) {
   const [open, setOpen] = useState(false);
-
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -37,6 +42,7 @@ export function AddTurbineDialog({ siteId }: { siteId: string }) {
           <TurbineForm
             mode="create"
             siteId={siteId}
+            turbineModels={turbineModels}
             onCancel={() => setOpen(false)}
             onSuccess={() => setOpen(false)}
           />

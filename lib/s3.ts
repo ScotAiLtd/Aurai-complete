@@ -31,3 +31,12 @@ export function buildDocumentKey(siteId: string, fileName: string): string {
     .slice(0, 120);
   return `documents/sites/${siteId}/${crypto.randomUUID()}-${safe}`;
 }
+
+export function buildTemplateKey(fileName: string): string {
+  const safe = fileName
+    .normalize("NFKD")
+    .replace(/[^\w.\-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 120);
+  return `awp-templates/${crypto.randomUUID()}-${safe}`;
+}

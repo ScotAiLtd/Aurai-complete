@@ -16,17 +16,20 @@ import {
   TurbineForm,
   type TurbineFormValues,
 } from "@/components/turbines/turbine-form";
+import type { TurbineModelOption } from "@/components/turbines/turbine-model-picker";
 
 type EditTurbineDialogProps = {
   siteId: string;
   turbineId: string;
   defaultValues: TurbineFormValues;
+  turbineModels: TurbineModelOption[];
 };
 
 export function EditTurbineDialog({
   siteId,
   turbineId,
   defaultValues,
+  turbineModels,
 }: EditTurbineDialogProps) {
   const [open, setOpen] = useState(false);
 
@@ -52,6 +55,7 @@ export function EditTurbineDialog({
             siteId={siteId}
             turbineId={turbineId}
             defaultValues={defaultValues}
+            turbineModels={turbineModels}
             onCancel={() => setOpen(false)}
             onSuccess={() => setOpen(false)}
           />

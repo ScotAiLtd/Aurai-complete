@@ -15,7 +15,10 @@ export const turbineSchema = z.object({
     .trim()
     .min(1, { message: "Turbine number is required." })
     .max(60),
-  type: optionalString,
+  turbineModelId: z
+    .string()
+    .trim()
+    .min(1, { message: "Turbine model is required." }),
   serial: optionalString,
   status: z.enum([
     TurbineStatus.WORKING,

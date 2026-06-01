@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import type { SiteUncheckedCreateInput } from "@/app/generated/prisma/models/Site";
 import { siteSchema, type SiteInput } from "@/lib/schemas/site";
 
 type ActionResult =
@@ -32,7 +33,7 @@ async function requireSession() {
 }
 
 export async function createSite(input: SiteInput): Promise<ActionResult> {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = siteSchema.safeParse(input);
   if (!parsed.success) {
@@ -40,8 +41,12 @@ export async function createSite(input: SiteInput): Promise<ActionResult> {
   }
 
   try {
+    const data: SiteUncheckedCreateInput = {
+      ...parsed.data,
+      createdById: session.user.id,
+    };
     const site = await prisma.site.create({
-      data: parsed.data,
+      data,
       select: { id: true },
     });
     revalidatePath("/sites");

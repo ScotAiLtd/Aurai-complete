@@ -14,6 +14,7 @@ type ActionResult =
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
+  return session;
 }
 
 function isUniqueViolation(err: unknown): boolean {
@@ -28,7 +29,7 @@ export async function createTurbine(
   siteId: string,
   input: TurbineInput,
 ): Promise<ActionResult> {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = turbineSchema.safeParse(input);
   if (!parsed.success) {
@@ -40,7 +41,14 @@ export async function createTurbine(
 
   try {
     const turbine = await prisma.turbine.create({
-      data: { ...parsed.data, siteId },
+      data: {
+        siteId,
+        name: parsed.data.name,
+        turbineModelId: parsed.data.turbineModelId,
+        serial: parsed.data.serial,
+        status: parsed.data.status,
+        createdById: session.user.id,
+      },
       select: { id: true },
     });
     revalidatePath(`/sites/${siteId}`);
@@ -86,7 +94,7 @@ export async function updateTurbine(
   siteId: string,
   input: TurbineInput,
 ): Promise<ActionResult> {
-  await requireSession();
+  const session = await requireSession();
 
   const parsed = turbineSchema.safeParse(input);
   if (!parsed.success) {
@@ -99,7 +107,10 @@ export async function updateTurbine(
   try {
     await prisma.turbine.update({
       where: { id: turbineId },
-      data: parsed.data,
+      data: {
+        ...parsed.data,
+        updatedById: session.user.id,
+      },
     });
     revalidatePath(`/sites/${siteId}`);
     return { ok: true, id: turbineId };

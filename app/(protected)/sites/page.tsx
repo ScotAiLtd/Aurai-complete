@@ -28,7 +28,7 @@ export default async function SitesPage() {
 
       {sites.length === 0 ? (
         <div className="flex h-40 items-center justify-center rounded-2xl bg-card text-sm text-muted-foreground ring-1 ring-foreground/10">
-          No sites yet. Click “Add Site” to create your first.
+          Click “Add Site” to create your first.
         </div>
       ) : (
         <SitesList sites={sites} />

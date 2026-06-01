@@ -43,9 +43,9 @@ export default async function TurbinesPage({
     select: {
       id: true,
       name: true,
-      type: true,
       serial: true,
       status: true,
+      turbineModel: { select: { name: true } },
       site: { select: { id: true, name: true } },
     },
   });
@@ -85,13 +85,11 @@ export default async function TurbinesPage({
                   >
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <span className="text-sm font-medium">{turbine.name}</span>
-                      {turbine.type || turbine.serial ? (
-                        <span className="truncate text-xs text-muted-foreground">
-                          {[turbine.type, turbine.serial]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                      ) : null}
+                      <span className="truncate text-xs text-muted-foreground">
+                        {[turbine.turbineModel.name, turbine.serial]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
                     </div>
                     <span className="truncate text-sm">
                       {turbine.site.name}

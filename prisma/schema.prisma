@@ -18,6 +18,16 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
+  sitesCreated         Site[]        @relation("SiteCreatedBy")
+  sitesUpdated         Site[]        @relation("SiteUpdatedBy")
+  turbinesCreated      Turbine[]     @relation("TurbineCreatedBy")
+  turbinesUpdated      Turbine[]     @relation("TurbineUpdatedBy")
+  documentsUploaded    Document[]    @relation("DocumentUploadedBy")
+  documentsMarkedReady Document[]    @relation("DocumentReadyForAwpBy")
+  documentsDeleted     Document[]    @relation("DocumentDeletedBy")
+  issuesResolved       AuditIssue[]  @relation("AuditIssueResolvedBy")
+  templatesCreated     AwpTemplate[] @relation("AwpTemplateCreatedBy")
+
   @@map("user")
 }
 
@@ -77,52 +87,120 @@ enum TurbineStatus {
 }
 
 model Site {
-  id                 String     @id @default(cuid())
-  name               String     @unique
+  id                 String    @id @default(cuid())
+  name               String    @unique
   portfolio          String?
   spv                String?
   oAndMProvider      String?
   numberOfTurbines   Int
   turbineMake        String?
   technology         String?
-  totalCapacityMw    Decimal?   @db.Decimal(10, 2)
+  totalCapacityMw    Decimal?  @db.Decimal(10, 2)
   commissioningDate  DateTime?
   operationalSince   DateTime?
   assetManager       String?
   turbineOem         String?
   turbineModel       String?
-  turbineRating      Decimal?   @db.Decimal(10, 2)
+  turbineRating      Decimal?  @db.Decimal(10, 2)
   projectStatus      String?
   lifeExpectancy     Int?
   lifeExtension      Int?
   gridConnectionType String?
   dno                String?
-  hubHeight          Decimal?   @db.Decimal(8, 2)
-  rotorDiameter      Decimal?   @db.Decimal(8, 2)
-  latitude           Decimal?   @db.Decimal(9, 6)
-  longitude          Decimal?   @db.Decimal(9, 6)
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  turbines           Turbine[]
-  documents          Document[]
+  hubHeight          Decimal?  @db.Decimal(8, 2)
+  rotorDiameter      Decimal?  @db.Decimal(8, 2)
+  latitude           Decimal?  @db.Decimal(9, 6)
+  longitude          Decimal?  @db.Decimal(9, 6)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
+  createdById String
+  createdBy   User    @relation("SiteCreatedBy", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?   @relation("SiteUpdatedBy", fields: [updatedById], references: [id])
+
+  turbines  Turbine[]
+  documents Document[]
+
+  @@index([createdById])
   @@map("site")
 }
 
-model Turbine {
+model TurbineModel {
   id        String        @id @default(cuid())
-  siteId    String
-  site      Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  name      String
-  type      String?
-  serial    String?
-  status    TurbineStatus @default(WORKING)
+  name      String        @unique
+  slug      String        @unique
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+  turbines  Turbine[]
+  templates AwpTemplate[]
+
+  @@map("turbine_model")
+}
+
+enum AwpTemplateStatus {
+  CONVERTING
+  READY
+  FAILED
+}
+
+model AwpTemplate {
+  id              String            @id @default(cuid())
+  name            String
+  sourcePdfS3Key  String
+  templateHtml    String?
+  slotsJson       Json?
+  status          AwpTemplateStatus @default(CONVERTING)
+  conversionError String?
+
+  // Optional categorisation — used later by the AWP generator to pick applicable templates
+  turbineModelId String?
+  turbineModel   TurbineModel? @relation(fields: [turbineModelId], references: [id])
+  jobType        String?
+
+  createdById String
+  createdBy   User   @relation("AwpTemplateCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([status])
+  @@index([turbineModelId])
+  @@index([createdById])
+  @@index([deletedAt])
+  @@map("awp_template")
+}
+
+model Turbine {
+  id             String        @id @default(cuid())
+  siteId         String
+  site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name           String
+  turbineModelId String
+  turbineModel   TurbineModel  @relation(fields: [turbineModelId], references: [id])
+  serial         String?
+  status         TurbineStatus @default(WORKING)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  createdById String
+  createdBy   User    @relation("TurbineCreatedBy", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?   @relation("TurbineUpdatedBy", fields: [updatedById], references: [id])
 
   @@unique([siteId, name])
   @@index([siteId])
+  @@index([turbineModelId])
+  @@index([createdById])
   @@map("turbine")
+}
+
+enum DocType {
+  AWP_SOURCE
+  REPORT
+  REFERENCE
+  OTHER
 }
 
 model Document {
@@ -132,10 +210,35 @@ model Document {
   fileName   String
   sizeBytes  BigInt
   s3Key      String   @unique
+  docType    DocType
   uploadedAt DateTime @default(now())
-  audits     Audit[]
+
+  uploadedById String
+  uploadedBy   User   @relation("DocumentUploadedBy", fields: [uploadedById], references: [id])
+
+  // AWP readiness
+  markedReadyForAwpById String?
+  markedReadyForAwpBy   User?     @relation("DocumentReadyForAwpBy", fields: [markedReadyForAwpById], references: [id])
+  markedReadyForAwpAt   DateTime?
+  markedReadyForAwpNote String?
+
+  // Version chain — when user re-uploads a corrected version
+  version           Int       @default(1)
+  previousVersionId String?   @unique
+  previousVersion   Document? @relation("DocumentVersions", fields: [previousVersionId], references: [id])
+  nextVersion       Document? @relation("DocumentVersions")
+
+  // Soft delete
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("DocumentDeletedBy", fields: [deletedById], references: [id])
+
+  audits Audit[]
 
   @@index([siteId])
+  @@index([docType])
+  @@index([uploadedById])
+  @@index([deletedAt])
   @@map("document")
 }
 
@@ -187,19 +290,22 @@ model Audit {
 }
 
 model AuditIssue {
-  id          String        @id @default(cuid())
-  auditId     String
-  audit       Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  severity    IssueSeverity
-  issueType   String
-  title       String
-  description String
-  suggestion  String?
-  pageNumber  Int?
-  section     String?
-  status      IssueStatus   @default(OPEN)
-  resolvedAt  DateTime?
-  createdAt   DateTime      @default(now())
+  id             String        @id @default(cuid())
+  auditId        String
+  audit          Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  severity       IssueSeverity
+  issueType      String
+  title          String
+  description    String
+  suggestion     String?
+  pageNumber     Int?
+  section        String?
+  status         IssueStatus   @default(OPEN)
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolvedBy     User?         @relation("AuditIssueResolvedBy", fields: [resolvedById], references: [id])
+  resolutionNote String?
+  createdAt      DateTime      @default(now())
 
   @@index([auditId])
   @@map("audit_issue")
