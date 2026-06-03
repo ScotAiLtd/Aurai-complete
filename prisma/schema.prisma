@@ -138,22 +138,12 @@ model TurbineModel {
   @@map("turbine_model")
 }
 
-enum AwpTemplateStatus {
-  CONVERTING
-  READY
-  FAILED
-}
-
 model AwpTemplate {
-  id              String            @id @default(cuid())
-  name            String
-  sourcePdfS3Key  String
-  templateHtml    String?
-  slotsJson       Json?
-  status          AwpTemplateStatus @default(CONVERTING)
-  conversionError String?
+  id             String @id @default(cuid())
+  name           String
+  sourcePdfS3Key String
 
-  // Optional categorisation — used later by the AWP generator to pick applicable templates
+  // Optional categorisation
   turbineModelId String?
   turbineModel   TurbineModel? @relation(fields: [turbineModelId], references: [id])
   jobType        String?
@@ -165,7 +155,6 @@ model AwpTemplate {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  @@index([status])
   @@index([turbineModelId])
   @@index([createdById])
   @@index([deletedAt])

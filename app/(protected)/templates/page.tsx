@@ -19,8 +19,6 @@ export default async function TemplatesPage() {
   const items = templates.map((t) => ({
     id: t.id,
     name: t.name,
-    status: t.status,
-    conversionError: t.conversionError,
     turbineModelName: t.turbineModel?.name ?? null,
     jobType: t.jobType,
     createdAt: t.createdAt,
@@ -33,8 +31,7 @@ export default async function TemplatesPage() {
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">AWP Templates</h1>
           <p className="text-sm text-muted-foreground">
-            Blank AWP forms. Once converted, they can be used to generate
-            Authorised Work Procedures.
+            Upload AWP template PDFs for each turbine model and job type.
           </p>
         </div>
         <UploadTemplateButton turbineModels={turbineModels} />

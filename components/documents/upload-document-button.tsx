@@ -205,7 +205,7 @@ export function UploadDocumentButton({ siteId, defaultDocType }: Props) {
               Document Type <span className="text-destructive">*</span>
             </Label>
             <Select
-              value={docType || undefined}
+              value={docType}
               onValueChange={(v) => setDocType(v as DocType)}
             >
               <SelectTrigger className="w-full">

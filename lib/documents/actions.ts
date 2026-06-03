@@ -2,10 +2,7 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import {
-  GetObjectCommand,
-  PutObjectCommand,
-} from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { auth } from "@/lib/auth";
@@ -148,7 +145,7 @@ export async function getDownloadUrl(
   }
 }
 
-// Soft delete — S3 object is retained so audit trail and version chain stay intact.
+// Soft delete, S3 object is retained so audit trail and version chain stay intact.
 export async function deleteDocument(
   documentId: string,
   siteId: string,

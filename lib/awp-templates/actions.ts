@@ -2,7 +2,6 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import {
   GetObjectCommand,
   PutObjectCommand,
@@ -12,7 +11,6 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { S3_BUCKET, buildTemplateKey, s3 } from "@/lib/s3";
-import { convertTemplate } from "@/lib/awp-templates/conversion";
 import {
   recordTemplateSchema,
   templateUploadRequestSchema,
@@ -89,51 +87,11 @@ export async function recordTemplate(
       },
       select: { id: true },
     });
-
-    // Kick off the Qwen3-VL conversion after the response is sent.
-    after(() =>
-      convertTemplate(template.id).catch((err) => {
-        console.error("[awp-templates] background conversion failed:", err);
-      }),
-    );
-
     revalidatePath("/templates");
     return { ok: true, id: template.id };
   } catch (err) {
     console.error("[awp-templates] record failed:", err);
     return { ok: false, error: "Could not save template." };
-  }
-}
-
-// Allow the user to re-run conversion when it fails or when they want to refresh.
-export async function reconvertTemplate(
-  templateId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requireSession();
-
-  const template = await prisma.awpTemplate.findUnique({
-    where: { id: templateId },
-    select: { id: true, deletedAt: true },
-  });
-  if (!template) return { ok: false, error: "Template not found." };
-  if (template.deletedAt) return { ok: false, error: "Template is deleted." };
-
-  try {
-    await prisma.awpTemplate.update({
-      where: { id: templateId },
-      data: { status: "CONVERTING", conversionError: null },
-    });
-    after(() =>
-      convertTemplate(templateId).catch((err) => {
-        console.error("[awp-templates] background reconversion failed:", err);
-      }),
-    );
-    revalidatePath(`/templates/${templateId}`);
-    revalidatePath("/templates");
-    return { ok: true };
-  } catch (err) {
-    console.error("[awp-templates] reconvert failed:", err);
-    return { ok: false, error: "Could not start reconversion." };
   }
 }
 
@@ -168,7 +126,7 @@ export async function getTemplatePdfUrl(
 export async function deleteTemplate(
   templateId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await requireSession();
+  await requireSession();
 
   const t = await prisma.awpTemplate.findUnique({
     where: { id: templateId },
@@ -182,8 +140,6 @@ export async function deleteTemplate(
       where: { id: templateId },
       data: { deletedAt: new Date() },
     });
-    // best-effort: stamp the deleter on a future audit-log table; nothing else for now
-    void session;
     revalidatePath("/templates");
     return { ok: true };
   } catch (err) {
